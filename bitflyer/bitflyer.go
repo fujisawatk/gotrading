@@ -122,3 +122,57 @@ func (api *APIClient) GetBalance() ([]Balance, error){
 	}
 	return balance, nil
 }
+
+// TickerAPIの情報を格納する構造体
+type Ticker struct {
+	ProductCode     string  `json:"product_code"`
+	Timestamp       string  `json:"timestamp"`
+	TickID          int     `json:"tick_id"`
+	BestBid         float64 `json:"best_bid"`
+	BestAsk         float64 `json:"best_ask"`
+	BestBidSize     float64 `json:"best_bid_size"`
+	BestAskSize     float64 `json:"best_ask_size"`
+	TotalBidDepth   float64 `json:"total_bid_depth"`
+	TotalAskDepth   float64 `json:"total_ask_depth"`
+	Ltp             float64 `json:"ltp"`
+	Volume          float64 `json:"volume"`
+	VolumeByProduct float64 `json:"volume_by_product"`
+}
+
+// 売りと買いの中間の値を返すメソッド
+func (t *Ticker) GetMidPrice() float64 {
+	return (t.BestBid + t.BestAsk) / 2
+}
+
+// データベースに対応している型に変換するメソッド
+func (t *Ticker) DateTime() time.Time {
+	// 日時データをパース（第一引数：フォーマット定義、第二引数：パースしたい文字列）
+	dateTime, err := time.Parse(time.RFC3339, t.Timestamp)
+	if err != nil {
+		log.Printf("action=DateTime, err=%s", err.Error())
+	}
+	return dateTime
+}
+
+// 日時データの切り捨てを行うメソッド
+func (t *Ticker) TruncateDateTime(duration time.Duration) time.Time {
+	return t.DateTime().Truncate(duration)
+}
+
+// TickerAPIにアクセスするための関数
+func (api *APIClient) GetTicker(productCode string) (*Ticker, error){
+	// リクエストURL
+	url := "ticker"
+	// TickerAPIにリクエストを送る。（productCodeが必要なため、クエリに追加する）
+	resp, err := api.doRequest("GET", url, map[string]string{"product_code": productCode}, nil)
+	if err != nil {
+		return nil, err
+	}
+	var ticker Ticker
+	// レスポンスされたjson形式の値をGo objectに変換して構造体に保管
+	err = json.Unmarshal(resp, &ticker)
+	if err != nil {
+		return nil, err
+	}
+	return &ticker, nil
+}
