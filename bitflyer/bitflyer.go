@@ -176,3 +176,32 @@ func (api *APIClient) GetTicker(productCode string) (*Ticker, error){
 	}
 	return &ticker, nil
 }
+
+func (api *APIClient) GetRealTimeTicker(symbol string, ch <-chan Ticker) {
+	// pubnubに送信するデータを宣言
+	pubnub := messaging.NewPubnub(
+		"", "sub-c-52a9ab50-291b-11e5-baaa-0619f8945a4f",
+		"", "", false, "", nil
+	)
+	channel := fmt.Sprintf("lighting_ticker_%s", symbol)
+	// 成功した時に取得するchannel
+	sucCha := make(chan []byte)
+	// 失敗した時にエラーを取得するchannel
+	errCha := make(chan []byte)
+
+	// goroutineでpubnubにchannelなどのデータを引数で渡す
+	go pubnub.Subscrisbe(channel, "", sucCha, false, errCha)
+	for {
+		select {
+			// sucChaに受信した場合
+		case res := <-sucCha:
+			fmt.Psrintln(string(res))
+			// errChaに受信した場合
+		case err := <-errCha:
+			log.Printf("action=GetRealTimeTicker err=%s", err)
+			// タイムアウトした場合
+		case <-messaging.SubscribeTimeout():
+			log.Printf("action=GetRealTimeTicker err=timeout")
+		}
+	}
+}
