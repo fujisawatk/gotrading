@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"gotrading/bitflyer"
 	"gotrading/config"
 	"gotrading/utils"
@@ -15,5 +16,9 @@ func main() {
 	// fmt.Println(ticker.DateTime())
 	// fmt.Println(ticker.TruncateDateTime(time.Hour))
 	tickerChannel := make(chan bitflyer.Ticker)
-	apiClient.GetRealTimeTicker(config.Config.ProductCode, tickerChannel)
+	go apiClient.GetRealTimeTicker(config.Config.ProductCode, tickerChannel)
+	for ticker := range tickerChannel {
+		fmt.Println(ticker)
+		fmt.Println(ticker.GetMidPrice())
+	}
 }

@@ -191,17 +191,45 @@ func (api *APIClient) GetRealTimeTicker(symbol string, ch <-chan Ticker) {
 
 	// goroutineでpubnubにchannelなどのデータを引数で渡す
 	go pubnub.Subscrisbe(channel, "", sucCha, false, errCha)
-	for {
-		select {
-			// sucChaに受信した場合
-		case res := <-sucCha:
-			fmt.Psrintln(string(res))
-			// errChaに受信した場合
-		case err := <-errCha:
-			log.Printf("action=GetRealTimeTicker err=%s", err)
-			// タイムアウトした場合
-		case <-messaging.SubscribeTimeout():
-			log.Printf("action=GetRealTimeTicker err=timeout")
+	OUTER:
+		for {
+			select {
+				// sucChaに受信した場合
+			case res := <-sucCha:
+				// interface宣言(様々な型でデータが返ってくるため)
+				// 形式例：[[{**, **, **}], **, **]
+				var tickerList []interface{}
+				// レスポンスされたjsonデータをgo objectに変換してtickerListに保管
+				if err := json.Unmarshal(res, &tickerList); err != nil {
+					// エラー（スライスの形でないデータが返ってきたら）ならOUTERに飛ぶ
+					continue OUTER
+				}
+				var ticker Ticker
+				// tickerListの最初のデータ形式をみる（形式：スライス）
+				switch tic := tickerList[0].(type){
+				case []interface{}:
+					// 中身がない時
+					if len(tic) == 0 {
+						continue OUTER
+					}
+					// スライスの中の{}の値をjsonに変換
+					marshaTic, err := json.Marshal(tic[0])
+					if err != nil {
+						continue OUTER
+					}
+					// structにunmashalする
+					if err := json.Unmarshal(marshaTic, &ticker); err != nil {
+						continue OUTER
+					}
+					// structに入ったデータをchannelに送る
+					ch <- ticker
+				}
+				// errChaに受信した場合
+			case err := <-errCha:
+				log.Printf("action=GetRealTimeTicker err=%s", err)
+				// タイムアウトした場合
+			case <-messaging.SubscribeTimeout():
+				log.Printf("action=GetRealTimeTicker err=timeout")
+			}
 		}
-	}
 }
