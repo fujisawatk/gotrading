@@ -9,9 +9,10 @@ import (
 
 // 構造体ConfigList定義
 type ConfigList struct {
-	ApiKey    string
-	ApiSecret string
-	LogFile   string
+	ApiKey      string
+	ApiSecret   string
+	LogFile     string
+	ProductCode string
 }
 
 // グローバル変数Config定義
@@ -29,8 +30,9 @@ func init() {
 
 	// グローバル変数Configにconfig.iniで取得した値を代入する。
 	Config = ConfigList{
-		ApiKey:    cfg.Section("bitflyer").Key("api_key").String(),
-		ApiSecret: cfg.Section("bitflyer").Key("api_secret").String(),
-		LogFile:   cfg.Section("gotrading").Key("log_file").String(),
+		ApiKey:      cfg.Section("bitflyer").Key("api_key").String(),
+		ApiSecret:   cfg.Section("bitflyer").Key("api_secret").String(),
+		LogFile:     cfg.Section("gotrading").Key("log_file").String(),
+		ProductCode: cfg.Section("gotrading").Key("product_code").String(),
 	}
 }
